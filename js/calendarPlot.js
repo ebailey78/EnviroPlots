@@ -16,12 +16,12 @@ function calendarPlot(target) {
 		this.dims.mon = new Object();
 		this.dims.cal = new Object();
 		this.dims.day = new Object();
-		this.dims.mon.width = this.dims.width / this.dims.columns;
-		this.dims.cal.width = this.dims.mon.width - (this.dims.mon.width / 8);
-		this.dims.day.width = this.dims.cal.width / 7;
+		this.dims.day.width = this.dims.width / (this.dims.columns * 8);
+		var f = this.dims.day.width - Math.floor(this.dims.day.width);
+		this.dims.mon.width = this.dims.day.width * 8
+		this.dims.cal.width = this.dims.day.width * 7;
 
-
-		this.dims.day.height = this.dims.day.width * 0.75;
+		this.dims.day.height = (this.dims.day.width * 0.75);
 		this.dims.cal.height = this.dims.day.height * 8;
 		this.dims.mon.height = this.dims.day.height * 9;
 		
@@ -56,8 +56,10 @@ calendarPlot.prototype.data = function(data) {
 }
 
 calendarPlot.prototype.render = function() {
-		var colorScale = d3.scale.linear().domain([0,65,3000]).range(["green", "yellow", "red"]);
-
+	
+	var colorScale = d3.scale.linear().domain([0,65,3000]).range(["green", "yellow", "red"]);
+	var textScale = d3.scale.linear().domain([0, 65, 3000]).range(["white", "#333", "white"])
+	
 	var cp = this;
 	var plot = cp.target
 		.attr("width", cp.dims.width + cp.dims.margin.left + cp.dims.margin.right)
@@ -66,6 +68,74 @@ calendarPlot.prototype.render = function() {
 			.attr("class", "plot")
 			.attr("transform", "translate(" + cp.dims.margin.left + ", " + cp.dims.margin.top + ")")
 
+	var showData = function(d, i, t, obj) {
+	
+		var hide = function(sel) {
+		
+			sel.selectAll("rect.popup")
+				.transition()
+					.delay(10)
+					.duration(40)
+					.attr("x", t.attr("x"))
+					.attr("y", t.attr("y"))
+					.attr("width", t.attr("width"))
+					.attr("height", t.attr("height"))
+					.remove()
+			sel.selectAll("text.popup")
+				.transition()
+					.delay(10)
+					.duration(40)
+					.attr("opacity", 1e-6)
+					.remove()
+			sel.transition().delay(10).duration(40).remove();
+		}
+				
+		var p = d3.select(t.parentNode);
+		var t = d3.select(t);
+		
+		hide(d3.selectAll("g.popup"))
+		
+		var pop = p.append("g")
+			.attr("class", "popup")
+			.on("mouseout", function() {hide(pop)})
+		
+		pop.append("rect")
+			.attr("class", "popup")
+			.attr("x", t.attr("x"))
+			.attr("y", t.attr("y"))
+			.attr("width", obj.dims.day.width)
+			.attr("height", obj.dims.day.height)
+			.attr("stroke-width", "2px")
+			.attr("stroke", "#333")
+			.attr("fill", t.attr("fill"))
+			.transition()
+				.delay(10)
+				.duration(50)
+				.attr("x", t.attr("x") - obj.dims.day.width / 2)
+				.attr("y", t.attr("y") - obj.dims.day.height / 2)
+				.attr("width", obj.dims.day.width * 2)
+				.attr("height", obj.dims.day.height * 2)
+				
+		pop.append("text")
+			.attr("class", "popup")
+			.attr("x", parseInt(t.attr("x"), 10) + (obj.dims.day.width / 2))
+			.attr("y", parseInt(t.attr("y"), 10) + (obj.dims.day.height / 2))
+			.attr("fill", textScale(d.value))
+			.attr("dy", "0.35em")
+			.attr("text-anchor", "middle")
+			.attr("font-weight", "bold")
+			.attr("font-size", "1em")
+			.attr("opacity", 1e-6)
+			.text(d.value)
+			.transition()
+				.delay(20)
+				.duration(30)
+				.attr("opacity", 1);
+	
+		var blah = "blah";
+	
+	}
+			
 	var day_data = function(d, i) {
 		var op = new Array();
 		
@@ -113,6 +183,14 @@ calendarPlot.prototype.render = function() {
 			var y = Math.floor(i / cp.dims.columns) * cp.dims.mon.height + (cp.dims.day.height / 2);
 			return "translate(" + Math.floor(x) + ", " + Math.floor(y) + ")";
 		})
+		.attr("opacity", 0)
+			
+	months
+		.transition()
+			.delay(function(d, i) {return (100 + Math.floor(i / cp.dims.columns) * 50)})
+			.duration(200)
+			.attr("opacity", 1)
+
 		
 	months.append("text")
 		.attr("class", "month label")
@@ -146,7 +224,6 @@ calendarPlot.prototype.render = function() {
 		.attr("font-weight", "bold")
 		.text(function(d) {return d})
 		
-		
 	months.append("g")
 		.attr("class", "grid")
 		.attr("transform", "translate(0, " + (cp.dims.day.height * 2) + ")")
@@ -162,4 +239,5 @@ calendarPlot.prototype.render = function() {
 	
 	months.selectAll("rect.day").data(day_data, function(d) {return d.week + "_" + d.day})
 		.attr("fill", function(d) {return colorScale(d.value)})
+		.on("mouseover", function(d, i) {showData(d, i, this, cp)})
 }
