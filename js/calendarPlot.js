@@ -1,7 +1,34 @@
 function calendarPlot(target) {
 
 	if(this instanceof calendarPlot) {
+
+		this.data = [];
+	
+		this.calculateDims = function(t) {
 		
+			var dim = new Object();
+			dim.margin = t.dims.margin
+			dim.totalWidth = t.dims.totalWidth;
+			dim.width = dim.totalWidth - dim.margin.left - dim.margin.right;;
+			dim.columns = t.dims.columns;
+			dim.mon = new Object();
+			dim.cal = new Object();
+			dim.day = new Object();
+					
+			dim.day.width = dim.width / (dim.columns * 8);
+			dim.mon.width = dim.day.width * 8
+			dim.cal.width = dim.day.width * 7;
+
+			dim.day.height = (dim.day.width * 0.75);
+			dim.cal.height = dim.day.height * 8;
+			dim.mon.height = dim.day.height * 9;
+			
+			dim.height = Math.ceil(t.data.length / dim.columns) * dim.mon.height;
+
+			return dim;
+			
+		}
+	
 		this.target = d3.select(target);
 		
 		this.Months = ["January", "February", "March", "April", "May", "June",
@@ -11,31 +38,10 @@ function calendarPlot(target) {
 	
 		this.dims = new Object;
 		this.dims.margin = {top: 10, right: 10, bottom: 40, left: 10};
-		this.dims.width = 700 - this.dims.margin.left - this.dims.margin.right;
+		this.dims.totalWidth = 700;
 		this.dims.columns = 4;
-		this.dims.mon = new Object();
-		this.dims.cal = new Object();
-		this.dims.day = new Object();
-		this.dims.day.width = this.dims.width / (this.dims.columns * 8);
-		var f = this.dims.day.width - Math.floor(this.dims.day.width);
-		this.dims.mon.width = this.dims.day.width * 8
-		this.dims.cal.width = this.dims.day.width * 7;
-
-		this.dims.day.height = (this.dims.day.width * 0.75);
-		this.dims.cal.height = this.dims.day.height * 8;
-		this.dims.mon.height = this.dims.day.height * 9;
-		
-		this.style = new Object();
-		this.style.font = new Object();
-				
-		this.style.font.family = "sans-serif";
-		this.style.font.ratio = 0.75;
-		this.style.font.size = parseInt(this.dims.day.height * this.style.font.ratio, 10) + "px";
-		this.style.fill = "#FFF";
-		this.style.stroke = "#303030";
-		this.style.width = "2px";
-		this.style.precision = 2;
-	
+		this.dims = this.calculateDims(this);
+			
 		return this;
 		
 	} else {
@@ -46,13 +52,50 @@ function calendarPlot(target) {
 
 }
 
-calendarPlot.prototype.data = function(data) {
+calendarPlot.prototype.addData = function(data) {
 
 	this.data = data;
-	this.dims.height = Math.ceil(this.data.length / this.dims.columns) * this.dims.mon.height;
-	
+	this.dims = this.calculateDims(this);
 	return this;
 
+}
+
+calendarPlot.prototype.columns = function(columns) {
+	this.dims.columns = columns;
+	this.dims = this.calculateDims(this);
+	return this;
+}
+
+calendarPlot.prototype.width = function(width) {
+	this.dims.totalWidth = width;
+	this.dims = this.calculateDims(this);
+	return this;
+}
+
+calendarPlot.prototype.margin = function(margins) {
+	if(margins.length === undefined) {
+		this.dims.margin = {top: margins, right: margins, bottom: margins, left: margins};
+	} else if(margins.length == 1) {
+		this.dims.margin = {top: margins[0], right: margins[0], bottom: margins[0], left: margins[0]};	
+	} else if(margins.length == 2) {
+		this.dims.margin = {top: margins[0], right: margins[1], bottom: margins[0], left: margins[1]};
+	} else if(margins.length == 3) {
+		this.dims.margin = {top: margins[0], right: margins[1], bottom: margins[2], left: margins[1]};
+	} else {
+		this.dims.margin = {top: margins[0], right: margins[1], bottom: margins[2], left: margins[3]};
+	}
+	this.dims = this.calculateDims(this);
+	return this;
+}
+
+calendarPlot.prototype.standard = function(standard) {
+	this.standard = standard
+	return this;
+}
+
+calendarPlot.prototype.colorScale = function(min, standard, max) {
+	this.colorScale = [min, standard, max];
+	return this;
 }
 
 calendarPlot.prototype.render = function() {
@@ -74,8 +117,8 @@ calendarPlot.prototype.render = function() {
 		
 			sel.selectAll("rect.popup")
 				.transition()
-					.delay(10)
-					.duration(40)
+					.delay(0)
+					.duration(0)
 					.attr("x", t.attr("x"))
 					.attr("y", t.attr("y"))
 					.attr("width", t.attr("width"))
@@ -83,11 +126,11 @@ calendarPlot.prototype.render = function() {
 					.remove()
 			sel.selectAll("text.popup")
 				.transition()
-					.delay(10)
-					.duration(40)
+					.delay(0)
+					.duration(0)
 					.attr("opacity", 1e-6)
 					.remove()
-			sel.transition().delay(10).duration(40).remove();
+			sel.transition().delay(0).duration(0).remove();
 		}
 				
 		var p = d3.select(t.parentNode);
@@ -109,27 +152,39 @@ calendarPlot.prototype.render = function() {
 			.attr("stroke", "#333")
 			.attr("fill", t.attr("fill"))
 			.transition()
-				.delay(10)
-				.duration(50)
+				.delay(0)
+				.duration(20)
 				.attr("x", t.attr("x") - obj.dims.day.width / 2)
 				.attr("y", t.attr("y") - obj.dims.day.height / 2)
 				.attr("width", obj.dims.day.width * 2)
 				.attr("height", obj.dims.day.height * 2)
-				
+		
 		pop.append("text")
 			.attr("class", "popup")
 			.attr("x", parseInt(t.attr("x"), 10) + (obj.dims.day.width / 2))
 			.attr("y", parseInt(t.attr("y"), 10) + (obj.dims.day.height / 2))
-			.attr("fill", textScale(d.value))
+			.attr("fill", function() {
+				if(d3.hsl(t.attr("fill")).l > 0.25) {
+					return "white";
+				} else {
+					return "#303030";
+				}
+			})
 			.attr("dy", "0.35em")
 			.attr("text-anchor", "middle")
 			.attr("font-weight", "bold")
-			.attr("font-size", "1em")
+			.attr("font-size", function() {
+				var fs = (cp.dims.day.height * 1.1);
+				var dvl = d.value.toString().length
+				if(dvl > 4) {fs = fs * 4 / dvl};
+				fs = parseInt(fs, 10) + "px";
+				return fs + "px"
+			})
 			.attr("opacity", 1e-6)
 			.text(d.value)
 			.transition()
-				.delay(20)
-				.duration(30)
+				.delay(5)
+				.duration(20)
 				.attr("opacity", 1);
 	
 		var blah = "blah";
@@ -199,7 +254,7 @@ calendarPlot.prototype.render = function() {
 		.attr("dy", "0.35em")
 		.attr("text-anchor", "middle")
 		.attr("font-family", "sans-serif")
-		.attr("font-size", "0.8em")
+		.attr("font-size", (cp.dims.day.height * 0.75) + "px")
 		.attr("font-weight", "bold")
 		.text(function(d) {return cp.Months[d.month -1] + " " + d.year})
 		
@@ -220,7 +275,7 @@ calendarPlot.prototype.render = function() {
 		.attr("dy", "0.35em")
 		.attr("text-anchor", "middle")
 		.attr("font-family", "sans-serif")
-		.attr("font-size", "0.7em")
+		.attr("font-size", (cp.dims.day.height * 0.75) + "px")
 		.attr("font-weight", "bold")
 		.text(function(d) {return d})
 		
